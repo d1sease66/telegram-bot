@@ -1,0 +1,12 @@
+{
+  "type": "service_account",
+  "project_id": "telega-bot-372923",
+  "private_key_id": "e664c509b5b4b256c4c253d1f52e9daa56f98664",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCrDeDnK3YsvUf7\nmA+fBKmUvrcJGaivajMmBiCjTIKZ7JzxkVtmJwthRgjAGtrbwNXXN+nGNzRAanfB\nF2Mmb2wjMfOhutb8CianzrqViC9T6tlryzHVUxp7wNqZ4WEKptjpk7/5evjSm3pU\nckOPw9OYsBaadKOl+6iYtjsfuPJ5JOQlgA4h8mH4rUSzh7rC68TWyJle8BNS21h/\nXl81nhyUzqcyoXSmOtwRqZ4iSUVui2rf5Pmhnf1/rh9dYokGH1pjb4jOQtfPyROD\nYVHe0E9fJiP7gFYxRMNawb9b8ssulWPFTcmiP/zlA0yNLTRiJ5KzAC4gzlnEOZOY\ncNw/g/j3AgMBAAECgf8htJpjnYIdh6BuncDoBnTyL77E79eiuRGT+r2QGp/aX3Ab\nt94R0S37GV/1Xjjeacu5R4QeblCIKADGRIAooOh1I2KlmCtvRa071YB82iAHhZSn\ncA1FURrKZFJ1//MfQqTQtzAAaqydDD7VuljrF6tE3MMlrEfoNCBZ9xzLzheHjk3s\noe01awFQLaNVWlK2IPYErlj2kzYbeW2um6Ucd/p+P5WnZnR8X6Bb+JrLhi4w2ipD\n60ikCZr6Ak3KtKaFcqmMjUMQR610kw1RUiOqE7CwzFAxb7oQspyMRl+SS2fjEjIq\nuUQXgGVcKcTMzuUBulwOkTlr0B3jOx723vxs5kECgYEA6yrIkoeMXhMtY+8qHgsI\nJGmx8xAPtSSYCh4VXLjI9+cOYLsqYt4scf4024k2SGqNqGtgCk9mGHyIHpXfK3SH\nD9Lzu9+UWckqRdE7jOQ46vExSAuU+ryDeR6gEkQn3EZHLHfQZCNjS1tbctAPyI/1\nr+9+HxKElCbGgtcOHvtfz5ECgYEAujUdvLDlfn6B0TN+7rfaAuwV68dgC8ZpwA2l\nhHoAG0lbgrvFdZof44moQYeBEaJGYpBJMmaUP7mLxOQ48dgk5ISu8dgyD7ingY5s\nMMEbO1GKREyJpilL89fGKezukqNZEpIgamEHVBKo44LtWZal4HjiLrEPN+jvo4AE\nQodCjAcCgYEAynEVItbfJij6HRpItn4mrznxv10nOHfdDnChUSWdk5LrVKgqr9u0\nhRkhpY90FFjtw3tTvOxm5lNl1naMHFt+3UdrHGM20SgUZO/ehMX+nXmuQ+f8gvB/\neWe8wpy7d6tkH8qwsVOpabime6rSu4P6K09O0i7dxK+wmffJpzAcZZECgYEAsInn\nVZwJGLJr9aFy+HSKVzbpWY6++qr0W8cUY9MfAr+76OiJPwQOs7UxNl93+PX28T+G\nhihG6VvKrbMKYg/gel9pVZT5cXpKJUSYQmjynnyiMDq4Tjbc8aRjFiCx14jSzA6K\neRDg186RHJJm4Qc44Ob62fW4TfOkL0kRwNloOEUCgYEAxb614H9N2CpfbcImLQIc\nhGU9Y01h5AZhXrvYPW0FzLUa0BFAZDFZaYvBQkUCcazuvms7lrY9xXWegrzy4f85\nx8PO5g4Qy4/Rlx21FMK4GaMhI3iQLfG7oVhKPxzvxNavj3Jk3lrTxP5KqfFo+AGq\nh99B6zp3g3BsNwxtHtryyhc=\n-----END PRIVATE KEY-----\n",
+  "client_email": "account@telega-bot-372923.iam.gserviceaccount.com",
+  "client_id": "108810314466304313536",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/account%40telega-bot-372923.iam.gserviceaccount.com"
+}

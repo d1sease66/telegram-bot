@@ -1,7 +1,5 @@
+import datetime
 
-from telebot import types
-
-import pandas as pd
 import aiogram.utils.markdown as md
 from aiogram import Bot, Dispatcher, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
@@ -11,15 +9,17 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.types import ParseMode, ContentType
 from aiogram.utils import executor
 
+from sheets import service, spreadsheet_id
 
 API_TOKEN = '5680438074:AAFuOaELOXB34t2EmBVhfl7kf-l0EWuHxUQ'
-TELEGRAM_CHANNEL = '@endvr_logistics'
 PAYMENTS_TOKEN = '1744374395:TEST:1d216a48d9848d11c825'
 ORDERS = '@orders_endvr'
-bot = Bot(token=API_TOKEN)
 
-EXCEl_ORDERS = []
-CATEGORIES_LIST = ['Кроссовки', 'Кроссовки', 'Одежда', 'Аксессуары', 'Техника']
+
+CATEGORIES_LIST = ['Кроссовки', 'Одежда', 'Аксессуары', 'Техника']
+SIZE_LIST = ['до 1 кг', 'около 1 кг', 'до 2 кг']
+
+bot = Bot(token=API_TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(bot=bot, storage=storage)
 
@@ -51,7 +51,9 @@ async def cancel_handler(message: types.Message, state: FSMContext):
         return
 
     await state.finish()
-    await message.reply('Заказ был отменен. Для того, чтобы открыть меню введите -  /start', reply_markup=types.ReplyKeyboardRemove())
+    await message.reply(
+        'Заказ был отменен. Для того, чтобы открыть меню введите -  /start',
+        reply_markup=types.ReplyKeyboardRemove())
 
 
 @dp.message_handler(content_types=['text'])
@@ -66,21 +68,21 @@ async def choose_order(message: types.Message):
         await bot.send_message(message.chat.id, 'Выберите категорию товара', reply_markup=markup)
         await Form.category.set()
     elif message.text == 'Проверить статус заказа':
-        df = pd.read_excel('./file_name.xlsx')
-        if f'@{message.from_user.username}' in list(df['Пользователь']):
-            user_orders = df[df['Пользователь'] == f'@{message.from_user.username}']
-            await bot.send_message(
-                message.chat.id,
-                f'У вас есть {len(list(user_orders["Пользователь"]))} заказ.',
-            )
-            for i in range(len(user_orders)):
-                await bot.send_message(
-                    message.chat.id,
-                    f'Артикул: {user_orders.iloc[i]["Артикул"]}.'
-                    f'Статус: {user_orders.iloc[i]["Статус"]}'
-                )
+        CORRECT_VALUES = []
+        request = service.spreadsheets().values().batchGet(
+            spreadsheetId=spreadsheet_id, ranges=["Лист1", "Лист2"]
+        ).execute()
+        value_ranges = request['valueRanges'][0]
+        all_values = value_ranges['values'][1:]
+        for value in all_values:
+            if f'@{message.from_user.username}' in value:
+                CORRECT_VALUES.append(f'Товар с артикулом: {value[4]}. Статус {value[6]}')
+        if len(CORRECT_VALUES) != 0:
+            await bot.send_message(message.chat.id, f'У вас оформлено {len(CORRECT_VALUES)} заказа')
+            for msg in CORRECT_VALUES:
+                await bot.send_message(message.chat.id, msg)
         else:
-            await bot.send_message(message.chat.id, 'Заказов нет')
+            await bot.send_message(message.chat.id, 'У вас нет заказов')
     else:
         await bot.send_message(message.chat.id, 'Не понимаю вас')
 
@@ -152,7 +154,13 @@ async def input_weight(message: types.Message, state: FSMContext):
 
 
 @dp.message_handler(content_types=['text'])
-@dp.message_handler(state=Form.weight)
+@dp.message_handler(lambda message: message.text not in SIZE_LIST, state=Form.weight)
+async def check_the_right_price(message: types.Message):
+    return await message.reply("Выберите размер, предложенный в меню")
+
+
+@dp.message_handler(content_types=['text'])
+@dp.message_handler(lambda message: message.text in SIZE_LIST, state=Form.weight)
 async def main(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['weight'] = message.text
@@ -170,14 +178,18 @@ async def main(message: types.Message, state: FSMContext):
             parse_mode=ParseMode.HTML,
         )
         if data['weight'] == 'около 1 кг':
-            new_price = int(data['price'] * 10.6 + 500)
+            new_price = int(data['price'] * 10.6 + 600)
         elif data['weight'] == 'до 1 кг':
-            new_price = int(data['price'] * 10.6 + 1000)
+            new_price = int(data['price'] * 10.6 + 500)
         elif data['weight'] == 'до 2 кг':
-            new_price = int(data['price'] * 10.6 + 2000)
+            new_price = int(data['price'] * 10.6 + 1000)
         else:
             new_price = 'Нет цены'
-        await bot.send_message(message.chat.id, f'Итоговая цена: {new_price}. Для отмены заказа введите команду /cancel', reply_markup=markup)
+        await bot.send_message(
+            message.chat.id,
+            f'Итоговая цена: {new_price}. Для отмены заказа введите команду /cancel',
+            reply_markup=markup
+        )
     await Form.next()
     global PRICE
     PRICE = types.LabeledPrice(label='Оплата вашей пары', amount=new_price * 100)
@@ -200,7 +212,7 @@ async def buy(message: types.Message, state: FSMContext,):
                                start_parameter='pay_for_your_item',
                                payload='test_invoice_payload'
                                )
-        await state.finish()
+    await Form.next()
 
 
 @dp.pre_checkout_query_handler(lambda query: True)
@@ -210,8 +222,12 @@ async def pre_checkout_query(pre_checkout_q: types.PreCheckoutQuery):
 
 @dp.message_handler(content_types=ContentType.SUCCESSFUL_PAYMENT)
 async def message_to_orders_chat(message: types.Message, state: FSMContext):
-    await bot.send_message(message.chat.id, f'Вам платеж на сумму {message.successful_payment.total_amount // 100} прошел успешно!')
+    await bot.send_message(
+        message.chat.id,
+        f'Вам платеж на сумму {message.successful_payment.total_amount // 100} прошел успешно!'
+    )
     async with state.proxy() as data:
+        date = datetime.datetime.today()
         await bot.send_message(
             ORDERS,
             md.text(
@@ -221,24 +237,30 @@ async def message_to_orders_chat(message: types.Message, state: FSMContext):
                 md.text('Размер/Комплектация:', data['size']),
                 md.text('Артикул:', data['article']),
                 md.text('Сумма:', f'{message.successful_payment.total_amount // 100} рублей'),
+                md.text('Дата:', date.strftime("%m/%d/%Y")),
                 sep='\n'
             ),
             parse_mode=ParseMode.HTML,
         )
-        d = {
-            'Пользователь': f'@{message.from_user.username}',
-            'Категория': data['category'],
-            'Вес': data['weight'],
-            'Размер/Комплектация': data['size'],
-            'Артикул': data['article'],
-            'Сумма': message.successful_payment.total_amount // 100,
-            'Статус': 'Принят'
-        }
-        EXCEl_ORDERS.append(d)
-        df = pd.DataFrame(EXCEl_ORDERS)
-        writer = pd.ExcelWriter('./file_name.xlsx', engine='xlsxwriter')
-        df.to_excel(writer)
-        writer.save()
+        values = service.spreadsheets().values().append(
+            spreadsheetId=spreadsheet_id,
+            range='Лист1!A2',
+            valueInputOption="RAW",
+            body={
+                "values": [
+                    [
+                        f'@{message.from_user.username}',
+                        data['category'],
+                        data['weight'],
+                        data['size'],
+                        data['article'],
+                        message.successful_payment.total_amount // 100,
+                        'Принят',
+                        date.strftime("%m/%d/%Y")
+                    ],
+                ]
+            }
+        ).execute()
     await state.finish()
 
 if __name__ == '__main__':
