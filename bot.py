@@ -35,11 +35,11 @@ class Form(StatesGroup):
 
 @dp.message_handler(commands=['start'])
 async def send_welcome(message: types.Message):
-    markup = types.ReplyKeyboardMarkup()
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, selective=True)
     make_order = types.KeyboardButton('Сделать заказ')
     check_order = types.KeyboardButton('Проверить статус заказа')
     markup.add(make_order, check_order)
-    await bot.send_message(message.chat.id, 'Здравствуйте! Это ENVDR бот. Что вам нужно?', reply_markup=markup)
+    await bot.send_message(message.chat.id, 'Здравствуйте! Это ENVDR бот для заказа вещей с Poizon. Что вам нужно?', reply_markup=markup)
 
 
 @dp.message_handler(state='*', commands='cancel')
@@ -59,12 +59,13 @@ async def cancel_handler(message: types.Message, state: FSMContext):
 @dp.message_handler(content_types=['text'])
 async def choose_order(message: types.Message):
     if message.text == 'Сделать заказ':
-        markup = types.ReplyKeyboardMarkup()
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, selective=True)
         sneakers_mk = types.KeyboardButton('Кроссовки')
         it_mk = types.KeyboardButton('Техника')
         clothes_mk = types.KeyboardButton('Одежда')
         acc = types.KeyboardButton('Аксессуары')
-        markup.add(sneakers_mk, it_mk, clothes_mk, acc)
+        other = types.KeyboardButton('Другое')
+        markup.add(sneakers_mk, it_mk, clothes_mk, acc, other)
         await bot.send_message(message.chat.id, 'Выберите категорию товара', reply_markup=markup)
         await Form.category.set()
     elif message.text == 'Проверить статус заказа':
@@ -85,6 +86,13 @@ async def choose_order(message: types.Message):
             await bot.send_message(message.chat.id, 'У вас нет заказов')
     else:
         await bot.send_message(message.chat.id, 'Не понимаю вас')
+
+
+@dp.message_handler(content_types=['text'])
+@dp.message_handler(lambda message: message.text == 'Другое', state=Form.category)
+async def check_the_right_price(message: types.Message):
+    return await message.reply("К сожалению бот не предусмотрел заказ вещей этой категории((. "
+                               "Обратитесь пожалуйста сюда - @rupak0v")
 
 
 @dp.message_handler(content_types=['text'])
@@ -224,7 +232,9 @@ async def pre_checkout_query(pre_checkout_q: types.PreCheckoutQuery):
 async def message_to_orders_chat(message: types.Message, state: FSMContext):
     await bot.send_message(
         message.chat.id,
-        f'Вам платеж на сумму {message.successful_payment.total_amount // 100} прошел успешно!'
+        f'Платеж на сумму {message.successful_payment.total_amount // 100} прошел успешно! '
+        f'Ваш заказ уже поступил в работу. Отследить заказ вы можете в главном меню. В случае проблем, '
+        f'связанных с оформлением мы с вами свяжемся через личные сообщения'
     )
     async with state.proxy() as data:
         date = datetime.datetime.today()
