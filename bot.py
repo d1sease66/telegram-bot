@@ -8,13 +8,14 @@ from aiogram.dispatcher.filters import Text
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.types import ParseMode, ContentType
 from aiogram.utils import executor
+from yoomoney import Quickpay, Client
 
 from sheets import service, spreadsheet_id
 
 API_TOKEN = '5680438074:AAFuOaELOXB34t2EmBVhfl7kf-l0EWuHxUQ'
 PAYMENTS_TOKEN = '1744374395:TEST:1d216a48d9848d11c825'
 ORDERS = '@orders_endvr'
-
+TOKEN = '4100118078681525.3FAC1D16398D8CF575AB386B7FF68FFBA8C3C6036CE89547365B06C27C2C191572C161B700336E3E48C88E60BC57F7BA105EA5E230B039F1682312F3EF2DF0C2EA784D78D39550D3E6690256692ED8ACDE1F97F2F7EFE287F3B7502FCDF1FB495B66761ADF6A058AC75B7EB834E574D2EBA1FBFB515B5E3C0E6F3B3F6919C851'
 
 CATEGORIES_LIST = ['Кроссовки', 'Одежда', 'Аксессуары', 'Техника']
 SIZE_LIST = ['до 1 кг', 'около 1 кг', 'до 2 кг']
@@ -170,6 +171,7 @@ async def check_the_right_price(message: types.Message):
 @dp.message_handler(content_types=['text'])
 @dp.message_handler(lambda message: message.text in SIZE_LIST, state=Form.weight)
 async def main(message: types.Message, state: FSMContext):
+    global new_price
     async with state.proxy() as data:
         data['weight'] = message.text
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True, selective=True)
@@ -188,7 +190,7 @@ async def main(message: types.Message, state: FSMContext):
         if data['weight'] == 'около 1 кг':
             new_price = int(data['price'] * 10.6 + 600)
         elif data['weight'] == 'до 1 кг':
-            new_price = int(data['price'] * 10.6 + 500)
+            new_price = int(data['price'] * 10.6 + 1)
         elif data['weight'] == 'до 2 кг':
             new_price = int(data['price'] * 10.6 + 1000)
         else:
@@ -199,43 +201,55 @@ async def main(message: types.Message, state: FSMContext):
             reply_markup=markup
         )
     await Form.next()
-    global PRICE
-    PRICE = types.LabeledPrice(label='Оплата вашей пары', amount=new_price * 100)
 
 
+@dp.message_handler(content_types=['text'])
 @dp.message_handler(state=Form.buy)
 async def buy(message: types.Message, state: FSMContext,):
     async with state.proxy() as data:
+        date = datetime.datetime.today()
         data['buy'] = message.text
-        markup = types.ReplyKeyboardRemove()
-        if PAYMENTS_TOKEN.split(':')[1] == 'TEST':
-            await bot.send_message(message.chat.id, 'Тестовый платеж', reply_markup=markup)
-        await bot.send_invoice(message.chat.id,
-                               title=f'Оплата вашей пары - {data["article"]}',
-                               description='-',
-                               provider_token=PAYMENTS_TOKEN,
-                               currency='rub',
-                               is_flexible=False,
-                               prices=[PRICE],
-                               start_parameter='pay_for_your_item',
-                               payload='test_invoice_payload'
-                               )
+        quickpay = Quickpay(
+            receiver="4100118078681525",
+            quickpay_form="shop",
+            targets=f"Оплата вашей пары {data['article']} ",
+            paymentType="SB",
+            sum=new_price,
+            label=f'{message.message_id}{data["article"]}{date.strftime("%m/%d/%Y")}'
+        )
+        markup = types.InlineKeyboardMarkup()
+        first_button = types.InlineKeyboardButton(text='Ссылка 1', url=quickpay.base_url)
+        second_button = types.InlineKeyboardButton(text='Ссылка 2', url=quickpay.redirected_url)
+        markup.add(first_button, second_button)
+        await bot.send_message(
+            message.chat.id, f'Вы можете оплатить заказ воспользовавшись одной из ссылок:',
+            reply_markup=markup
+        )
+        await bot.send_message(message.chat.id, 'Как только вы оплатили заказ пропишите команду - /check')
     await Form.next()
 
 
-@dp.pre_checkout_query_handler(lambda query: True)
-async def pre_checkout_query(pre_checkout_q: types.PreCheckoutQuery):
-    await bot.answer_pre_checkout_query(pre_checkout_q.id, ok=True)
+@dp.message_handler(state='*', commands='check')
+@dp.message_handler(Text(equals='check', ignore_case=True), state='*')
+async def check_payment(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        date = datetime.datetime.today()
+        client = Client(TOKEN)
+        history = client.operation_history(label=f'{message.message_id}{data["article"]}{date.strftime("%m/%d/%Y")}')
+        if history.operations:
+            global succes_msg
+            succes_msg = f'Платеж на сумму {new_price} прошел успешно!' \
+                  f'Ваш заказ уже поступил в работу. Отследить заказ вы можете в главном меню. В случае проблем, ' \
+                  f'связанных с оформлением мы с вами свяжемся через личные сообщения'
+            await bot.send_message(message.chat.id, succes_msg)
+        else:
+            await bot.send_message(message.chat.id, 'Вы еще не оплатили заказ либо сервера не успели обработаться. '
+                                                    'Подождите 10секунд перед тем, как прописать команду еще раз')
 
 
-@dp.message_handler(content_types=ContentType.SUCCESSFUL_PAYMENT)
+@dp.message_handler(content_types=['text'], state=Form.buy)
+@dp.message_handler(lambda message: message.text == succes_msg)
 async def message_to_orders_chat(message: types.Message, state: FSMContext):
-    await bot.send_message(
-        message.chat.id,
-        f'Платеж на сумму {message.successful_payment.total_amount // 100} прошел успешно! '
-        f'Ваш заказ уже поступил в работу. Отследить заказ вы можете в главном меню. В случае проблем, '
-        f'связанных с оформлением мы с вами свяжемся через личные сообщения'
-    )
     async with state.proxy() as data:
         date = datetime.datetime.today()
         await bot.send_message(
