@@ -12,6 +12,7 @@ from aiogram.utils.callback_data import CallbackData
 
 from sheets import service, spreadsheet_id
 
+CNY_COURSE = float(input())
 API_TOKEN = '5680438074:AAFuOaELOXB34t2EmBVhfl7kf-l0EWuHxUQ'
 ORDERS = '@orders_endvr'
 
@@ -240,7 +241,7 @@ async def input_price(message: types.Message, state: FSMContext):
             ship_price = 850
         await bot.send_message(
             message.chat.id,
-            f'Итоговая цена с учетом доставки: {int(11.6*int(data["price"])+ship_price)}',
+            f'Итоговая цена с учетом доставки: {int(CNY_COURSE*int(data["price"])+ship_price)}',
             reply_markup=inline_markup_2
         )
     await UserState.next()
